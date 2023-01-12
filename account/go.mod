@@ -1,4 +1,4 @@
-module github.com/ndenisj/memrizer
+module github.com/ndenisj/go_mem
 
 go 1.19
 
