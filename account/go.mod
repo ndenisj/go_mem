@@ -1,4 +1,4 @@
-module github.com/ndenisj/go_mem
+module github.com/ndenisj/go_mem/account
 
 go 1.19
 
