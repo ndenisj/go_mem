@@ -1,2 +1,4 @@
+test:
+	go test -v -cover ./...
 
-.PHONEY:
+.PHONEY: test
