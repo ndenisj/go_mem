@@ -12,6 +12,7 @@ import (
 // tokenService used for injecting an implementation of TokenRepository
 // for use in service methods along with keys and secrets for signing JWT
 type tokenService struct {
+	TokenRepository       model.TokenRepository
 	PrivKey               *rsa.PrivateKey
 	PubKey                *rsa.PublicKey
 	RefreshSecret         string
@@ -21,6 +22,7 @@ type tokenService struct {
 
 // TSConfig will hold repositories that will eventually be injected into this service layer
 type TSConfig struct {
+	TokenRepository       model.TokenRepository
 	PrivKey               *rsa.PrivateKey
 	PubKey                *rsa.PublicKey
 	RefreshSecret         string
@@ -32,6 +34,7 @@ type TSConfig struct {
 // repository layer dependencies
 func NewTokenService(c *TSConfig) model.TokenService {
 	return &tokenService{
+		TokenRepository:       c.TokenRepository,
 		PrivKey:               c.PrivKey,
 		PubKey:                c.PubKey,
 		RefreshSecret:         c.RefreshSecret,
@@ -58,7 +61,20 @@ func (s *tokenService) NewPairFromUser(ctx context.Context, u *model.User, prevT
 		return nil, apperrors.NewInternal()
 	}
 
-	// TODO: store refresh tokens by calling TokenRepository methods
+	// set freshly minted refresh token to valid list
+	if err := s.TokenRepository.SetRefreshToken(ctx, u.UID.String(), refreshToken.ID, refreshToken.ExpiresIn); err != nil {
+
+		log.Printf("Error storing tokenID for uid: %v. Error: %v\n", u.UID.String(), err.Error())
+		return nil, apperrors.NewInternal()
+
+	}
+
+	// delete users current refresh token (used when refreshing idToken)
+	if prevTokenID != "" {
+		if err := s.TokenRepository.DeleteRefreshToken(ctx, u.UID.String(), prevTokenID); err != nil {
+			log.Printf("could not delete previous refreshToken for uid: %v, tokenID: %v\n", u.UID.String(), prevTokenID)
+		}
+	}
 
 	return &model.TokenPair{
 		IDToken:      idToken,
