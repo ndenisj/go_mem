@@ -1,4 +1,4 @@
-# Memrizer
+# Memorizer
 
 ## Setup local development
 
