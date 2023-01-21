@@ -11,13 +11,14 @@ type Type string
 
 // "Set" of valid errorTypes
 const (
-	Authorization        Type = "AUTHORIZATION"        // Authentication Failures -
-	BadRequest           Type = "BADREQUEST"           // Validation errors / BadInput
-	Conflict             Type = "CONFLICT"             // Already exists (eg, create account with existent email) - 409
-	Internal             Type = "INTERNAL"             // Server (500) and fallback errors
-	NotFound             Type = "NOTFOUND"             // For not finding resource
-	PayloadTooLarge      Type = "PAYLOADTOOLARGE"      // for uploading tons of JSON, or an image over the limit - 413
-	UnsupportedMediaType Type = "UNSUPPORTEDMEDIATYPE" // for http 415
+	Authorization        Type = "AUTHORIZATION"         // Authentication Failures -
+	BadRequest           Type = "BAD_REQUEST"           // Validation errors / BadInput
+	Conflict             Type = "CONFLICT"              // Already exists (eg, create account with existent email) - 409
+	Internal             Type = "INTERNAL"              // Server (500) and fallback errors
+	NotFound             Type = "NOT_FOUND"             // For not finding resource
+	PayloadTooLarge      Type = "PAYLOAD_TOO_LARGE"     // for uploading tons of JSON, or an image over the limit - 413
+	UnsupportedMediaType Type = "UNSUPPORTED_MEDIATYPE" // for http 415
+	ServiceUnavailable   Type = "SERVICE_UNAVAILABLE"   // For long running handlers
 )
 
 // Error holds a custom error for the application
@@ -54,6 +55,8 @@ func (e *Error) Status() int {
 		return http.StatusRequestEntityTooLarge
 	case UnsupportedMediaType:
 		return http.StatusUnsupportedMediaType
+	case ServiceUnavailable:
+		return http.StatusServiceUnavailable
 	default:
 		return http.StatusInternalServerError
 	}
@@ -127,5 +130,13 @@ func NewUnsupportedMediaType(reason string) *Error {
 	return &Error{
 		Type:    UnsupportedMediaType,
 		Message: reason,
+	}
+}
+
+// NewServiceUnavailable to create an error for 503
+func NewServiceUnavailable() *Error {
+	return &Error{
+		Type:    ServiceUnavailable,
+		Message: fmt.Sprintf("Service unavailable or timed out"),
 	}
 }
