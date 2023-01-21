@@ -52,3 +52,17 @@ func (r *pgUserRepository) FindByID(ctx context.Context, uid uuid.UUID) (*model.
 
 	return user, nil
 }
+
+func (r *pgUserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	user := &model.User{}
+
+	query := "SELECT * FROM users WHERE email=$1"
+
+	// we need to actually check errors as it could be something other than not found
+	if err := r.DB.GetContext(ctx, user, query, email); err != nil {
+		log.Printf("Unable to get user with email address: %v. Err: %v\n", email, err)
+		return user, apperrors.NewNotFound("email", email)
+	}
+
+	return user, nil
+}
