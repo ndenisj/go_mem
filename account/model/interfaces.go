@@ -23,6 +23,7 @@ type UserService interface {
 // in regards to producing jwt as string
 type TokenService interface {
 	NewPairFromUser(ctx context.Context, u *User, prevTokenID string) (*TokenPair, error)
+	ValidateIDToken(tokenString string) (*User, error)
 }
 
 /**
