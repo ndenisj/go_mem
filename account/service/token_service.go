@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/ndenisj/go_mem/account/model"
 	"github.com/ndenisj/go_mem/account/model/apperrors"
 )
@@ -46,6 +47,14 @@ func NewTokenService(c *TSConfig) model.TokenService {
 // NewPairFromUser creates fresh id and refresh tokens for the current user
 // If a previous token is included, the previous token is removed from the repository
 func (s *tokenService) NewPairFromUser(ctx context.Context, u *model.User, prevTokenID string) (*model.TokenPair, error) {
+	if prevTokenID != "" {
+		if err := s.TokenRepository.DeleteRefreshToken(ctx, u.UID.String(), prevTokenID); err != nil {
+			log.Printf("could not delete previous refreshToken for uid: %v, tokenID: %v\n", u.UID.String(), prevTokenID)
+
+			return nil, err
+		}
+	}
+
 	// No need to use a repository for idToken as it is unrelated to any data source
 	idToken, err := generateIDToken(u, s.PrivKey, s.IDExpirationSecs)
 
@@ -62,23 +71,27 @@ func (s *tokenService) NewPairFromUser(ctx context.Context, u *model.User, prevT
 	}
 
 	// set freshly minted refresh token to valid list
-	if err := s.TokenRepository.SetRefreshToken(ctx, u.UID.String(), refreshToken.ID, refreshToken.ExpiresIn); err != nil {
-
+	if err := s.TokenRepository.SetRefreshToken(ctx, u.UID.String(), refreshToken.ID.String(), refreshToken.ExpiresIn); err != nil {
 		log.Printf("Error storing tokenID for uid: %v. Error: %v\n", u.UID.String(), err.Error())
 		return nil, apperrors.NewInternal()
-
 	}
 
 	// delete users current refresh token (used when refreshing idToken)
-	if prevTokenID != "" {
-		if err := s.TokenRepository.DeleteRefreshToken(ctx, u.UID.String(), prevTokenID); err != nil {
-			log.Printf("could not delete previous refreshToken for uid: %v, tokenID: %v\n", u.UID.String(), prevTokenID)
-		}
-	}
+	// if prevTokenID != "" {
+	// 	if err := s.TokenRepository.DeleteRefreshToken(ctx, u.UID.String(), prevTokenID); err != nil {
+	// 		log.Printf("could not delete previous refreshToken for uid: %v, tokenID: %v\n", u.UID.String(), prevTokenID)
+	// 	}
+	// }
 
 	return &model.TokenPair{
-		IDToken:      idToken,
-		RefreshToken: refreshToken.SS,
+		IDToken: model.IDToken{
+			SS: idToken,
+		},
+		RefreshToken: model.RefreshToken{
+			SS:  refreshToken.SS,
+			ID:  refreshToken.ID,
+			UID: u.UID,
+		},
 	}, nil
 }
 
@@ -94,4 +107,30 @@ func (s *tokenService) ValidateIDToken(tokenString string) (*model.User, error) 
 	}
 
 	return claims.User, nil
+}
+
+// ValidateRefreshToken checks and make sure the JWT provided by a string is valid
+// and returns a RefreshToken if valid
+func (s *tokenService) ValidateRefreshToken(tokenString string) (*model.RefreshToken, error) {
+	// validate actual JWT with string of secret
+	claims, err := validateRefreshToken(tokenString, s.RefreshSecret)
+	// Return unauthorized error in all instances of failing to verify user
+	if err != nil {
+		log.Printf("unable to validate or parse refreshToken for token string: %s\n%v\n", tokenString, err)
+		return nil, apperrors.NewAuthorization("unable to verify user from refresh token")
+	}
+
+	// Standard claims store ID as a string, i want 'model' to be clear our string is a UUID
+	tokenUUID, err := uuid.Parse(claims.Id)
+	if err != nil {
+		log.Printf("claims ID could not be parsed as UUID: %s\n%v\n", claims.Id, err)
+		return nil, apperrors.NewAuthorization("unable to verify user from refresh token")
+	}
+
+	return &model.RefreshToken{
+		ID:  tokenUUID,
+		SS:  tokenString,
+		UID: claims.UID,
+	}, nil
+
 }
