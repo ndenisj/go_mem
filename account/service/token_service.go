@@ -76,13 +76,6 @@ func (s *tokenService) NewPairFromUser(ctx context.Context, u *model.User, prevT
 		return nil, apperrors.NewInternal()
 	}
 
-	// delete users current refresh token (used when refreshing idToken)
-	// if prevTokenID != "" {
-	// 	if err := s.TokenRepository.DeleteRefreshToken(ctx, u.UID.String(), prevTokenID); err != nil {
-	// 		log.Printf("could not delete previous refreshToken for uid: %v, tokenID: %v\n", u.UID.String(), prevTokenID)
-	// 	}
-	// }
-
 	return &model.TokenPair{
 		IDToken: model.IDToken{
 			SS: idToken,
@@ -93,6 +86,10 @@ func (s *tokenService) NewPairFromUser(ctx context.Context, u *model.User, prevT
 			UID: u.UID,
 		},
 	}, nil
+}
+
+func (s *tokenService) Signout(ctx context.Context, uid uuid.UUID) error {
+	return s.TokenRepository.DeleteUserRefreshTokens(ctx, uid.String())
 }
 
 // ValidateIDToken validates the id token jwt string
