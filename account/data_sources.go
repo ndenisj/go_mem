@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 type dataSources struct {
-	DB          *sqlx.DB
-	RedisClient *redis.Client
+	DB            *sqlx.DB
+	RedisClient   *redis.Client
+	StorageClient *storage.Client
 }
 
 // initDS establishes connections to fields in dataSources
@@ -60,9 +63,21 @@ func initDS() (*dataSources, error) {
 		return nil, fmt.Errorf("error connecting to redis: %w", err)
 	}
 
+	// Initialize google cloud
+	log.Printf("Connecting to cloud storage\n")
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel() // release operation if slow Operation completes before time elapses
+
+	storage, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error creating cloud storage: %w", err)
+	}
+
 	return &dataSources{
-		DB:          db,
-		RedisClient: rdb,
+		DB:            db,
+		RedisClient:   rdb,
+		StorageClient: storage,
 	}, nil
 }
 
@@ -74,6 +89,10 @@ func (d *dataSources) close() error {
 
 	if err := d.RedisClient.Close(); err != nil {
 		return fmt.Errorf("error closing Redis client: %w", err)
+	}
+
+	if err := d.StorageClient.Close(); err != nil {
+		return fmt.Errorf("error closing Cloud storage client: %w", err)
 	}
 
 	return nil

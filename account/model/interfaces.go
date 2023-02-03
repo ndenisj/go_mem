@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"mime/multipart"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ type UserService interface {
 	Signup(ctx context.Context, u *User) error
 	Signin(ctx context.Context, u *User) error
 	UpdateDetails(ctx context.Context, u *User) error
+	SetProfileImage(ctx context.Context, uid uuid.UUID, imageFileHeader *multipart.FileHeader) (*User, error)
 }
 
 // TokenService defines methods the handler layer expect to interact with
@@ -39,6 +41,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	Create(ctx context.Context, u *User) error
 	Update(ctx context.Context, u *User) error
+	UpdateImage(ctx context.Context, uid uuid.UUID, imageURL string) (*User, error)
 }
 
 // TokenRepository defines methods that it expects a repository it
@@ -47,4 +50,10 @@ type TokenRepository interface {
 	SetRefreshToken(ctx context.Context, userID string, tokenID string, expiresIn time.Duration) error
 	DeleteRefreshToken(ctx context.Context, userID string, prevTokenID string) error
 	DeleteUserRefreshTokens(ctx context.Context, userID string) error
+}
+
+// ImageRepository defines methods it expects a repository it
+// interact with to implement
+type ImageRepository interface {
+	UpdateProfile(ctx context.Context, objName string, imageFile multipart.File) (string, error)
 }
