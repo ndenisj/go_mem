@@ -20,6 +20,7 @@ type UserService interface {
 	Signin(ctx context.Context, u *User) error
 	UpdateDetails(ctx context.Context, u *User) error
 	SetProfileImage(ctx context.Context, uid uuid.UUID, imageFileHeader *multipart.FileHeader) (*User, error)
+	ClearProfileImage(ctx context.Context, uid uuid.UUID) error
 }
 
 // TokenService defines methods the handler layer expect to interact with
@@ -56,4 +57,5 @@ type TokenRepository interface {
 // interact with to implement
 type ImageRepository interface {
 	UpdateProfile(ctx context.Context, objName string, imageFile multipart.File) (string, error)
+	DeleteProfile(ctx context.Context, objName string) error
 }

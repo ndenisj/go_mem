@@ -85,3 +85,14 @@ func (m *MockUserService) SetProfileImage(ctx context.Context, uid uuid.UUID, im
 
 	return r0, r1
 }
+
+func (m *MockUserService) ClearProfileImage(ctx context.Context, uid uuid.UUID) error {
+	ret := m.Called(ctx, uid)
+
+	var r0 error
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(error)
+	}
+
+	return r0
+}

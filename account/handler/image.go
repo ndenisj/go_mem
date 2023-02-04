@@ -67,10 +67,3 @@ func (h *Handler) Image(c *gin.Context) {
 		"message":  "success",
 	})
 }
-
-// DeleteImage handler
-func (h *Handler) DeleteImage(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"hello": "it's deleteImage",
-	})
-}
